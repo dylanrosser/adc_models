@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from a2d import a2d
 from scipy.fft import fft, fftfreq
 from scipy.signal.windows import blackman
+import adc
 
 nbits = 10
 vref = 1.5
@@ -36,6 +37,25 @@ print('ENOB = ', enob)
 
 #fft on output
 dout = a2d(vin, vref=vref, nbits=nbits)
+vout = vref*dout/(2**nbits)
+dout_norm = dout - dout.mean()
+vout_norm = vout - vout.mean()
+sp = fft(dout_norm*w)
+sph = sp[:nyq]
+mag = abs(sph)
+mag_norm = (mag/(nyq))**2
+sbin = np.argmax(mag_norm)
+idxl = sbin-leak if sbin-leak >=0 else 0
+idxh = sbin+leak+1 if sbin+leak+1 <= nyq else nyq
+sig_power = mag_norm[idxl:idxh].sum()
+noise_power = mag_norm.sum()-sig_power
+snr = 10*np.log10(sig_power/noise_power)
+enob = (snr-1.76)/6.02
+print('ENOB = ', enob)
+
+# fft on ADC class
+adc1 = adc.ADC(vref=vref, nbits=nbits)
+dout = adc1.convert(vin)
 vout = vref*dout/(2**nbits)
 dout_norm = dout - dout.mean()
 vout_norm = vout - vout.mean()
